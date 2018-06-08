@@ -1,59 +1,6 @@
 <html>
 <head>
-<style>
-* {
-	box-sizing: border-box;
-}
-body {
-	width: 100%;
-	margin: 0; padding: 0;
-}
-.header, .footer {
-	padding: 10px 50px;
-	position: fixed;
-	left: 0; top: 0;
-	width: 100%;
-	background-color: #ffffffa1;
-}
-.footer {
-	top: unset;
-	bottom: 0;
-}
-.viewer {
-	width: 100%;
-	margin: 50px;
-}
-.chapter {
-	font-size: 18px;
-}
-
-.page .viewer {
-	height: 600px;
-	overflow: hidden;
-	white-space: nowrap;
-	margin-top: 100px;
-	font-size: 0px;
-    letter-spacing: 0;
-    word-spacing: 0;
-}
-.page .chapter {
-	vertical-align: top;
-	white-space: initial;
-	width: 100%;
-	height: 600px;
-	overflow: hidden;
-	display: inline-block;
-}
-.page .contents {
-	height: 100%;
-	column-width: 480px;
-	column-gap: 40px;
-	column-fill: auto;
-}
-input {
-	width: 40px;
-}
-</style>
+<link rel="stylesheet" href="./style.css" />
 
 </head>
 <body>
@@ -69,10 +16,9 @@ input {
 			<button id="page">페이지 보기</button>
 		</div>
 		<div>
-			다단 보기: <input id="pagesInContainer" type="number" value="1" min="1" max="5" /> <button id="updatePagesInContainer">OK</button>
+			다단: <input id="pagesInContainer" type="number" value="1" min="1" max="5" /> <button id="updatePagesInContainer">OK</button>
 			단 사이 간격: <input id="chapterGap" type="number" value="40" /> <button id="updateChapterGap">OK</button>
 		</div>
-
 	</div>
 	<div id="viewer" class="viewer">
 		<div id="c1" class="chapter">
@@ -177,121 +123,6 @@ input {
 		<div id="pageInfo">Page 1 / 1</div>
 	</div>
 
-<script>
-const viewer = document.getElementById('viewer');
-
-let containerWidth = 1000,
-	containerMargin = 50,
-	chapterGap = 40,
-	chapter = 1,
-	page = 1,
-	pagesInContainer = 1,
-	chapterNum = 0,
-	viewMode = 'page',
-	chapters = [];
-
-const init = (mode) => {
-	if (mode) {
-		viewMode = mode;
-	}
-	if (viewMode === 'page') {
-		document.body.className = 'page';
-		const w = window.innerWidth;
-
-		containerWidth = w - (containerMargin * 2);
-
-		viewer.style.width = `${containerWidth}px`;
-		[].slice.call(document.querySelectorAll('.chapter')).forEach((e) => { e.style.width = `${containerWidth}px`; });
-		[].slice.call(document.querySelectorAll('.contents')).forEach((e) => {
-			e.style.columnGap = `${chapterGap}px`;
-			e.style.columnWidth = `${(containerWidth - (chapterGap * (pagesInContainer - 1))) / pagesInContainer}px`;
-		});
-
-		chapterNum = getChapterNum();
-		gatherAllChapterInfo();
-		setChapterInfo();
-		setPageInfo();
-		moveTo(1);
-
-	} else {
-		document.body.className = '';
-		viewer.style.width = 'auto';
-		[].slice.call(document.querySelectorAll('.chapter')).forEach((e) => { e.style.width = '100%'; });
-		[].slice.call(document.querySelectorAll('.contents')).forEach((e) => {
-			e.style.columnGap = e.style.columnWidth = 'unset';
-		});
-
-	}
-};
-
-const getChapterNum = () => document.querySelectorAll('.chapter').length;
-const gatherAllChapterInfo = () => {
-	let accumulatedPages = 0;
-	chapters = [].slice.call(document.querySelectorAll('.contents')).map((elem, index) => {
-		let pages = Math.ceil(elem.scrollWidth / (containerWidth + chapterGap ));
-		//elem.style.columns = `${pages * pagesInContainer}`;
-		// elem.style.width = `${pages * containerWidth}px`;
-
-		const pageOffset = accumulatedPages;
-		accumulatedPages += pages;
-		return { pages, pageOffset, chapter: index + 1 };
-	});
-};
-const getChapterInfo = (chapterNum) => chapters[chapterNum - 1];
-const getChapterInfoByPage = (page) => chapters.find(c => page > c.pageOffset && page <= c.pageOffset + c.pages);
-const getAllPageNum = () => {
-	const wholeWidth = [].slice.call(document.querySelectorAll('.chapter')).reduce((w, elem) => {
-		return w + elem.scrollWidth;
-	}, 0);
-	return Math.ceil(wholeWidth / containerWidth);
-};
-
-const setChapterInfo = () => document.getElementById('chapterInfo').innerHTML = `Chapter ${chapter} / ${chapterNum}`;
-const setPageInfo = () => document.getElementById('pageInfo').innerHTML = `Page ${page * pagesInContainer} / ${getAllPageNum() * pagesInContainer}`;
-
-const moveTo = (p) => {
-	const chapterInfo = getChapterInfoByPage(p);
-	if (chapterInfo) {
-		page = p;
-		chapter = chapterInfo.chapter;
-		viewer.scrollLeft = (chapter - 1) * containerWidth;
-		document.getElementById(`c${chapter}`).scrollLeft = (p - chapterInfo.pageOffset - 1) * (containerWidth + chapterGap);
-		console.log(chapterInfo, page, document.getElementById(`c${chapter}`).scrollLeft);
-		setChapterInfo();
-		setPageInfo();
-	}
-};
-
-init();
-window.addEventListener('resize', () => init());
-
-document.getElementById('cp').addEventListener('click', () => {
-	const c = getChapterInfo(chapter - 1);
-	if (c) {
-		moveTo(c.pageOffset + 1);
-	}
-});
-document.getElementById('cn').addEventListener('click', () => {
-	const c = getChapterInfo(chapter + 1);
-	if (c) {
-		moveTo(c.pageOffset + 1);
-	}
-});
-document.getElementById('pp').addEventListener('click', () => moveTo(page - 1));
-document.getElementById('pn').addEventListener('click', () => moveTo(page + 1));
-
-document.getElementById('updatePagesInContainer').addEventListener('click', () => {
-	pagesInContainer = parseInt(document.getElementById('pagesInContainer').value);
-	init();
-});
-document.getElementById('updateChapterGap').addEventListener('click', () => {
-	chapterGap = parseInt(document.getElementById('chapterGap').value);
-	init();
-});
-document.getElementById('scroll').addEventListener('click', () => init('scroll'));
-document.getElementById('page').addEventListener('click', () => init('page'));
-
-
-</script>
+	<script src="./normal.js"></script>
 </body>
 </html>
