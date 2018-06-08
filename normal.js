@@ -34,7 +34,7 @@ const init = (mode) => {
 		moveTo(1);
 
 	} else {
-		document.body.className = '';
+		document.body.className = 'scroll';
 		viewer.style.width = 'auto';
 		[].slice.call(document.querySelectorAll('.chapter')).forEach((e) => { e.style.width = '100%'; });
 		[].slice.call(document.querySelectorAll('.contents')).forEach((e) => {

@@ -1,0 +1,32 @@
+<html>
+<head>
+	<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+	<div class="header">
+		<div class="buttonGroup">
+			<button id="scroll" class="scrollActive">스크롤 보기</button>
+			<button id="page" class="pageActive">페이지 보기</button>
+		</div>
+		<div class="buttonGroup pageOnly">
+			<button id="cp">&lt;&lt;</button>
+			<button id="pp">&lt;</button>
+			<button id="pn">&gt;</button>
+			<button id="cn">&gt;&gt;</button>
+		</div>
+		<div class="buttonGroup pageOnly">
+			단 수: <input id="pagesInContainer" type="number" value="1" min="1" max="5" /> 단
+			간격: <input id="chapterGap" type="number" value="40" /> px
+			<button id="updateColumn">OK</button>
+		</div>
+	</div>
+	<div id="viewer" class="viewer"></div>
+	<div class="footer">
+		<div id="chapterInfo"></div>
+		<div id="pageInfo"></div>
+		<div id="loading">Loading...</div>
+	</div>
+
+	<script src="./lazy-load.js"></script>
+</body>
+</html>

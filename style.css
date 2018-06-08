@@ -11,10 +11,13 @@ body {
 	left: 0; top: 0;
 	width: 100%;
 	background-color: #ffffffa1;
+	border-bottom: 1px solid #aaa;
 }
 .footer {
 	top: unset;
 	bottom: 0;
+	border-bottom: 0;
+	border-top: 1px solid #aaa;
 }
 .viewer {
 	width: 100%;
@@ -23,12 +26,11 @@ body {
 .chapter {
 	font-size: 18px;
 }
-
 .page .viewer {
-	height: 600px;
+	height: calc(100vh - 200px);
 	overflow: hidden;
 	white-space: nowrap;
-	margin-top: 100px;
+	margin: 100px 50px;
 	font-size: 0px;
     letter-spacing: 0;
     word-spacing: 0;
@@ -37,7 +39,7 @@ body {
 	vertical-align: top;
 	white-space: initial;
 	width: 100%;
-	height: 600px;
+	height: 100%;
 	overflow: hidden;
 	display: inline-block;
 }
@@ -47,6 +49,26 @@ body {
 	column-gap: 40px;
 	column-fill: auto;
 }
+.buttonGroup {
+	display: inline;
+}
+.pageOnly {
+	display: none;
+}
+.page .pageOnly {
+	display: unset;
+}
+
 input {
-	width: 40px;
+	width: 80px;
+	border: 0;
+	border-bottom: 1px solid #ddd;
+	padding: 4px 8px;
+	height: 24px;
+}
+button {
+	padding: 4px 10px;
+	border: none;
+	background: #ddd;
+	height: 24px;
 }
