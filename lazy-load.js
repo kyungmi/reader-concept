@@ -21,12 +21,13 @@ const restorePosition = () => {
 	const c = getChapterInfo(chapter);
 	const to = Math.round((offsetRatioInChapter * (viewMode === 'page' ? c.pages : c.height)) + c.offset);
 	console.log(`offsetRatioInChapter: ${offsetRatioInChapter}, to: ${to}`);
-	moveTo(to);
+	moveTo(viewMode === 'page' ? to + 1 : to + window.innerHeight);
 };
 const setOffset = (_offset) => {
 	offset = _offset;
 	const c = getChapterInfo(chapter);
-	offsetRatioInChapter = (offset - c.offset) / (viewMode === 'page' ? c.pages : c.height );
+	const position = viewMode === 'page' ? offset - c.offset - 1 : offset - c.offset - window.innerHeight;
+	offsetRatioInChapter = position / (viewMode === 'page' ? c.pages : c.height );
 	console.log(`setOffset: ${_offset}, offsetRatioInChapter: ${offsetRatioInChapter}`);
 };
 
