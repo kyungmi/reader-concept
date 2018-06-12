@@ -9,21 +9,23 @@ let containerWidth = 1000,
 	offsetRatioInChapter = 0.0,
 	pagesInContainer = 1,
 	chapterNum = 50,
-	viewMode = 'page',
+	viewMode = 'scroll',
 	chapters = {},
 	firstChapter = 1,
 	lastChapter = 2,
 	isLoading = false,
-	fullHeight = 0;
+	fullHeight = 0,
+	initialized = false;
 
 
 const restorePosition = () => {
 	const c = getChapterInfo(chapter);
 	const to = Math.round((offsetRatioInChapter * (viewMode === 'page' ? c.pages : c.height)) + c.offset);
-	console.log(`offsetRatioInChapter: ${offsetRatioInChapter}, to: ${to}`);
+	console.log(`chapter: ${chapter}, offsetRatioInChapter: ${offsetRatioInChapter}, to: ${to}`);
 	moveTo(viewMode === 'page' ? to + 1 : to + window.innerHeight);
 };
 const setOffset = (_offset) => {
+	if (!initialized) return;
 	offset = _offset;
 	const c = getChapterInfo(chapter);
 	const position = viewMode === 'page' ? offset - c.offset - 1 : offset - c.offset - window.innerHeight;
@@ -97,7 +99,83 @@ const setStyle = () => {
 };
 
 const renderChapters = async (startChap, endChap, withCalc = false) => {
-	const viewerFrag = document.createDocumentFragment();
+	firstChapter = startChap = Math.max(1, startChap);
+	lastChapter = endChap = Math.min(chapterNum, endChap);
+
+	if (withCalc) {
+		let progressedChap = 0;
+		setIsLoading(progressedChap, chapterNum);
+
+		const calcDiv = createChapterElement('last');
+		viewer.innerHTML = '';
+		viewer.append(calcDiv);
+
+		let _offset = 0;
+		for (let i = 1; i < chapterNum + 1; i++) {
+			const chapterInfo = await loadChapter(i);
+			const chapterElem = chapterInfo.element;
+
+			calcDiv.innerHTML = chapterElem.innerHTML;
+
+			if (viewMode === 'page') {
+				const pages = Math.ceil(calcDiv.scrollWidth / (containerWidth + chapterGap));
+				chapters[i].pages = pages;
+			} else {
+				chapters[i].height = calcDiv.scrollHeight;
+			}
+
+			chapterInfo.offset = _offset;
+
+			// 계산이 끝나면 미리 보여준다.
+			if (i >= startChap && i <= endChap) {
+				if (viewMode === 'scroll') {
+					chapterElem.style.top = `${_offset}px`;
+				}
+				viewer.insertBefore(chapterElem, calcDiv);
+			}
+
+			_offset += viewMode === 'page' ? chapterInfo.pages : chapterInfo.height;
+
+			progressedChap += 1;
+			setIsLoading(progressedChap, chapterNum);
+
+		}
+		calcDiv.innerHTML = '';
+
+		if (viewMode === 'scroll') {
+			fullHeight = _offset;
+			viewer.style.height = `${fullHeight}px`;
+		}
+		setIsLoading(false);
+	} else {
+		let progressedChap = 0, progressMax = endChap - startChap + 1;
+		setIsLoading(progressedChap, progressMax);
+		const viewerFrag = document.createDocumentFragment();
+
+		for (let i = startChap; i < endChap + 1; i++) {
+			const chapterInfo = await loadChapter(i);
+
+			console.log(chapterInfo);
+
+			if (chapterInfo.offset && viewMode === 'scroll') {
+				chapterInfo.element.style.top = `${chapterInfo.offset}px`;
+			}
+			viewerFrag.appendChild(chapterInfo.element);
+
+			progressedChap += 1;
+			setIsLoading(progressedChap, progressMax);
+		}
+		// append chapters
+		const newViewer = viewer.cloneNode();
+		newViewer.appendChild(viewerFrag);
+		viewer.innerHTML = newViewer.innerHTML;
+		setIsLoading(false);
+	}
+};
+
+/*
+const renderChapters = async (startChap, endChap, withCalc = false) => {
+	
 	const progressMax = withCalc ? chapterNum + (endChap - startChap + 1) : chapterNum;
 	let progressedChap = 0;
 	setIsLoading(progressedChap, progressMax);
@@ -170,9 +248,9 @@ const renderChapters = async (startChap, endChap, withCalc = false) => {
 
 	setIsLoading(false);
 };
-
+*/
 const init = async (mode) => {
-	
+	initialized = false;
 	if (mode) {
 		viewMode = mode;
 	}
@@ -182,6 +260,7 @@ const init = async (mode) => {
 	
 	setChapterInfo();
 	setPageInfo();
+	initialized = true;
 	restorePosition();
 };
 
@@ -276,6 +355,7 @@ document.getElementById('page').addEventListener('click', () => init('page'));
 
 window.addEventListener('scroll', throttle(() => {
 	if (viewMode === 'page') return;
+	if (!initialized) return;
 
 	const currentY = document.scrollingElement.scrollTop;
 	if (offset - window.innerHeight === currentY) {
