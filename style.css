@@ -5,13 +5,18 @@ body {
 	width: 100%;
 	margin: 0; padding: 0;
 }
+#clast {
+	opacity: 0;
+}
 .header, .footer {
-	padding: 10px 50px;
+	padding: 10px;
 	position: fixed;
 	left: 0; top: 0;
 	width: 100%;
 	background-color: #ffffffa1;
 	border-bottom: 1px solid #aaa;
+	z-index: 1000;
+	font-size: 0.4em;
 }
 .footer {
 	top: unset;
@@ -26,6 +31,9 @@ body {
 .chapter {
 	font-size: 18px;
 }
+.scroll .chapter {
+	position: absolute;
+}
 .page .viewer {
 	height: calc(100vh - 200px);
 	overflow: hidden;
@@ -34,6 +42,9 @@ body {
 	font-size: 0px;
     letter-spacing: 0;
     word-spacing: 0;
+}
+.scroll .viewer {
+	position: relative;
 }
 .page .chapter {
 	vertical-align: top;
@@ -65,10 +76,12 @@ input {
 	border-bottom: 1px solid #ddd;
 	padding: 4px 8px;
 	height: 24px;
+	font-size: 0.4em;
 }
 button {
 	padding: 4px 10px;
 	border: none;
 	background: #ddd;
 	height: 24px;
+	font-size: 0.4em;
 }

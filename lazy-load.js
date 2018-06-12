@@ -12,18 +12,22 @@ let containerWidth = 1000,
 	viewMode = 'page',
 	chapters = {},
 	firstChapter = 1,
-	lastChapter = 1,
-	isLoading = false;
+	lastChapter = 2,
+	isLoading = false,
+	fullHeight = 0;
 
 
 const restorePosition = () => {
 	const c = getChapterInfo(chapter);
-	moveTo(Math.round((offsetRatioInChapter * (viewMode === 'page' ? c.pages : c.height)) + c.offset));
+	const to = Math.round((offsetRatioInChapter * (viewMode === 'page' ? c.pages : c.height)) + c.offset);
+	console.log(`offsetRatioInChapter: ${offsetRatioInChapter}, to: ${to}`);
+	moveTo(to);
 };
 const setOffset = (_offset) => {
 	offset = _offset;
 	const c = getChapterInfo(chapter);
-	offsetRatioInChapter = (offset - c.offset) / (viewMode === 'page' ? c.pages : c.height);
+	offsetRatioInChapter = (offset - c.offset) / (viewMode === 'page' ? c.pages : c.height );
+	console.log(`setOffset: ${_offset}, offsetRatioInChapter: ${offsetRatioInChapter}`);
 };
 
 const createChapterElement = num => {
@@ -34,23 +38,19 @@ const createChapterElement = num => {
 };
 
 const loadChapter = (num) => {
-	const n = Math.floor(Math.random() * 4) + 1;
-	const uri = `./contents/${n}.html`;
-	const title = `Title ${num}`;
-
-	if (chapters[num]) {
-		return chapters[num];
-	}
-	return fetch(uri).then(response => response.text()).then(contents => {
-		const chapterElem = createChapterElement(num);
-		chapterElem.innerHTML = `<div class="contents"><h1>${title}</h1>${contents}</div>`;
-
+	if (!chapters[num]) {
 		chapters[num] = {
 			chapter: num,
-			uri,
-			title,
-			element: chapterElem
+			uri: `./contents/${Math.floor(Math.random() * 4) + 1}.html`,
+			title: `Title ${num}`
 		};
+	}
+
+	return fetch(chapters[num].uri).then(response => response.text()).then(contents => {
+		const chapterElem = createChapterElement(num);
+		chapterElem.innerHTML = `<div class="contents"><h1>${chapters[num].title}</h1>${contents}</div>`;
+
+		chapters[num].element = chapterElem;
 
 		return chapters[num];
 	});
@@ -74,6 +74,7 @@ const setStyle = () => {
 
 	if (viewMode === 'page') {
 		document.body.className = 'page';
+		viewer.style = '';
 		const w = window.innerWidth;
 
 		containerWidth = w - (containerMargin * 2);
@@ -84,7 +85,7 @@ const setStyle = () => {
 			.page .contents { column-gap: ${chapterGap}px; column-width: ${(containerWidth - (chapterGap * (pagesInContainer - 1))) / pagesInContainer}px; }
 		`;
 	} else {
-		document.body.className = '';
+		document.body.className = 'scroll';
 
 		style.innerHTML = `
 			.viewer { width: auto; }
@@ -107,6 +108,11 @@ const renderChapters = async (startChap, endChap, withCalc = false) => {
 	for (let i = startChap; i < endChap + 1; i++) {
 		const chapterInfo = await loadChapter(i);
 
+		console.log(chapterInfo);
+
+		if (chapterInfo.offset && viewMode === 'scroll') {
+			chapterInfo.element.style.top = `${chapterInfo.offset}px`;
+		}
 		viewerFrag.appendChild(chapterInfo.element);
 
 		progressedChap += 1;
@@ -124,7 +130,7 @@ const renderChapters = async (startChap, endChap, withCalc = false) => {
 
 	if (withCalc) {
 		const calcDiv = document.getElementById('clast');
-		let offset = 0;
+		let _offset = 0;
 		for (let i = 1; i < chapterNum + 1; i++) {
 			const chapterInfo = await loadChapter(i);
 			const chapterElem = chapterInfo.element;
@@ -138,13 +144,27 @@ const renderChapters = async (startChap, endChap, withCalc = false) => {
 				chapters[i].height = calcDiv.scrollHeight;
 			}
 
-			chapterInfo.offset = offset;
-			offset += viewMode === 'page' ? chapterInfo.pages : chapterInfo.height;
+			chapterInfo.offset = _offset;
+
+			
+			if (i >= startChap && i <= endChap) {
+				if (viewMode === 'scroll') {
+					document.getElementById(`c${i}`).style.top = `${_offset}px`;
+				}
+			}
+
+			_offset += viewMode === 'page' ? chapterInfo.pages : chapterInfo.height;
 
 			progressedChap += 1;
 			setIsLoading(progressedChap, progressMax);
+
 		}
 		calcDiv.innerHTML = '';
+
+		if (viewMode === 'scroll') {
+			fullHeight = _offset;
+			viewer.style.height = `${fullHeight}px`;
+		}
 	}
 
 	setIsLoading(false);
@@ -155,7 +175,7 @@ const init = async (mode) => {
 	if (mode) {
 		viewMode = mode;
 	}
-
+	
 	setStyle();
 	await renderChapters(firstChapter, lastChapter, true);
 	
@@ -166,17 +186,21 @@ const init = async (mode) => {
 
 
 const getChapterInfo = (chapterNum) => chapters[chapterNum];
-const getChapterInfoByOffset = (offset) => Object.values(chapters).find(c => offset > c.offset && offset <= c.offset + (viewMode === 'page' ? c.pages : c.height));
+const getChapterInfoByOffset = (offset) => Object.values(chapters).find((c) => {
+	return offset > c.offset && offset <= c.offset + (viewMode === 'page' ? c.pages : c.height);
+});
 
 const setChapterInfo = () => document.getElementById('chapterInfo').innerHTML = `Chapter ${chapter} / ${chapterNum}`;
 const setPageInfo = () => {
+	const lastChapter = chapters[chapterNum - 1];
+	const whole = (viewMode === 'page') ? (lastChapter.offset + lastChapter.pages) * pagesInContainer : lastChapter.offset + lastChapter.height;
 	document.getElementById('pageInfo').innerHTML = `
-		Position ${offset * pagesInContainer} (${(offsetRatioInChapter * 100).toFixed(2)}%)
-		/ ${(chapters[chapterNum - 1].offset + chapters[chapterNum - 1].pages) * pagesInContainer}
+		Position ${offset * (viewMode === 'page' ? pagesInContainer : 1)} (${(offsetRatioInChapter * 100).toFixed(2)}%)
+		/ ${whole}
 	`;
 };
 const getChapterElem = (num) => document.getElementById(`c${num}`);
-const moveTo = async (_offset) => {
+const moveTo = async (_offset, goTo = true) => {
 	const chapterInfo = getChapterInfoByOffset(_offset);
 	if (chapterInfo) {
 		if (chapter !== chapterInfo.chapter) {
@@ -184,12 +208,14 @@ const moveTo = async (_offset) => {
 			await renderChapters(chapter - 1, chapter + 1);
 		}
 		setOffset(_offset);
-		if (viewMode === 'page') {
-			viewer.scrollLeft = (chapter - firstChapter) * containerWidth;
-			getChapterElem(chapter).scrollLeft = (offset - chapterInfo.offset - 1) * (containerWidth + chapterGap);
-		} else {
-			// TODO hmm...
-			document.scrollingElement.scrollTop = offset - getChapterInfo(firstChapter).offset;
+		if (goTo) {
+			if (viewMode === 'page') {
+				viewer.scrollLeft = (chapter - firstChapter) * containerWidth;
+				getChapterElem(chapter).scrollLeft = (offset - chapterInfo.offset - 1) * (containerWidth + chapterGap);
+			} else {
+				// TODO hmm...
+				document.scrollingElement.scrollTop = offset - window.innerHeight;
+			}
 		}
 		
 		setChapterInfo();
@@ -197,8 +223,32 @@ const moveTo = async (_offset) => {
 	}
 };
 
+
+function throttle(fn, limit = 100, delayed = false) {
+  let inThrottle = false;
+  return (...args) => {
+    const context = this;
+    if (!inThrottle) {
+      if (delayed) {
+        setTimeout(() => fn.apply(context, args), limit);
+      } else {
+        fn.apply(context, args);
+      }
+      inThrottle = true;
+      setTimeout(() => { inThrottle = false; }, limit);
+    }
+  };
+}
+
 init();
-window.addEventListener('resize', () => init());
+let initialWindowWidth = window.innerWidth;
+window.addEventListener('resize', () => {
+	const w = window.innerWidth;
+	if (w !== initialWindowWidth) {
+		initialWindowWidth = w;
+		init();
+	}
+});
 
 document.getElementById('cp').addEventListener('click', () => {
 	const c = getChapterInfo(chapter - 1);
@@ -223,29 +273,15 @@ document.getElementById('updateColumn').addEventListener('click', () => {
 document.getElementById('scroll').addEventListener('click', () => init('scroll'));
 document.getElementById('page').addEventListener('click', () => init('page'));
 
-window.addEventListener('scroll', () => {
+window.addEventListener('scroll', throttle(() => {
 	if (viewMode === 'page') return;
 
 	const currentY = document.scrollingElement.scrollTop;
-	const currentOffset = currentY + getChapterInfo(firstChapter).offset + window.innerHeight;
-	const currentChapter = getChapterInfoByOffset(currentOffset);
-	
-	if (!currentChapter) return;
-	
-	if (currentY < 100) {
-		const c = getChapterInfo(chapter - 1);
-		if (c) {
-			console.log('moveTo:' + c.offset + c.height - document.scrollingElement.scrollHeight);
-			moveTo(c.offset + c.height - document.scrollingElement.scrollHeight + 1);
-		}
-	} else if (currentY + window.innerHeight > document.scrollingElement.scrollHeight - 100) {
-		const c = getChapterInfo(chapter + 1);
-		if (c) {
-			console.log('moveTo:' + c.offset);
-			moveTo(c.offset + 1);
-		}
-	} else {
-		moveTo(currentOffset - window.innerHeight);
+	if (offset - window.innerHeight === currentY) {
+		return;
 	}
+	const currentOffset = currentY + window.innerHeight;
+	
+	moveTo(currentOffset, false);
 
-});
+}, 500, true));
